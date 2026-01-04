@@ -1,0 +1,24 @@
+/* 1. Tüm elementlerin kutu hesabını düzelt */
+* {
+  box-sizing: border-box;
+}
+
+/* 2. Sayfanın genel ayarları */
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #111; /* Siyah arka plan */
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 3. İŞTE ÇÖZÜM BURADA: React'in Ana Kutusu (#root) */
+#root {
+  width: 100%;       /* Genişliği %100 yap */
+  max-width: 100%;   /* Kısıtlamayı kaldır */
+  margin: 0;         /* Kenar boşluklarını sıfırla */
+  padding: 0;        /* İç boşlukları sıfırla */
+  text-align: left;  /* Yazıları sola yasla (Vite bazen ortalar) */
+}
