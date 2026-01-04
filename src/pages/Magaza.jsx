@@ -1,16 +1,12 @@
 import { useState, useEffect } from 'react'
 
-// --- ÜRÜN KARTI ---
 function UrunKarti(props) {
   return (
     <div className="urun-karti" style={{ 
       border: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '20px', 
-      padding: '25px', 
-      backgroundColor: 'rgba(255, 255, 255, 0.05)', 
-      backdropFilter: 'blur(10px)',
-      textAlign: 'left', 
-      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+      borderRadius: '20px', padding: '25px', 
+      backgroundColor: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)',
+      textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
       boxShadow: '0 4px 15px rgba(0,0,0,0.3)', height: '100%'
     }}>
       <div>
@@ -39,13 +35,14 @@ function UrunKarti(props) {
 }
 
 function Magaza({ sepeteEkle }) { 
+  // Başlangıçta boş dizi ([]) olduğundan emin oluyoruz
   const [urunler, setUrunler] = useState([]);
-  const [kategoriler, setKategoriler] = useState([]); // Kategoriler için hafıza
-  const [seciliKategori, setSeciliKategori] = useState(null); // Şu an hangi kategori seçili?
+  const [kategoriler, setKategoriler] = useState([]);
+  const [seciliKategori, setSeciliKategori] = useState(null);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [aramaMetni, setAramaMetni] = useState(""); 
+  const [hataMesaji, setHataMesaji] = useState(null); // Hata göstermek için
 
-  // 1. Sayfa Açılınca Hem Ürünleri Hem Kategorileri Çek
   useEffect(() => {
     tumUrunleriGetir();
     kategorileriGetir();
@@ -53,47 +50,71 @@ function Magaza({ sepeteEkle }) {
 
   const tumUrunleriGetir = () => {
     setYukleniyor(true);
+    // Buradaki URL'in Render URL'i olduğundan emin ol (sonunda / olmasın)
     fetch('https://hayalperest-api-pro-v1.onrender.com/api/urunler')
-      .then(cevap => cevap.json())
+      .then(cevap => {
+        if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
+        return cevap.json();
+      })
       .then(veri => {
-        setUrunler(veri);
+        console.log("Gelen Ürünler:", veri); // Konsolda ne geldiğini görelim
+        // ÖNEMLİ KONTROL: Gelen veri bir liste mi?
+        if (Array.isArray(veri)) {
+            setUrunler(veri);
+            setHataMesaji(null);
+        } else {
+            console.error("API'den liste gelmedi:", veri);
+            setHataMesaji("Veriler hatalı formatta geldi.");
+            setUrunler([]); // Çökmemesi için boş liste ata
+        }
         setYukleniyor(false);
+      })
+      .catch(hata => {
+        console.error("Fetch Hatası:", hata);
+        setHataMesaji("Sunucuya bağlanılamadı. Render uyanıyor olabilir.");
+        setYukleniyor(false);
+        setUrunler([]);
       });
   };
 
   const kategorileriGetir = () => {
     fetch('https://hayalperest-api-pro-v1.onrender.com/api/kategoriler')
       .then(cevap => cevap.json())
-      .then(veri => setKategoriler(veri));
+      .then(veri => {
+          if(Array.isArray(veri)) setKategoriler(veri);
+          else setKategoriler([]);
+      })
+      .catch(err => console.log("Kategori hatası", err));
   };
 
-  // 2. Kategoriye Tıklanınca Çalışacak Fonksiyon
   const kategoriSec = (katId) => {
     setSeciliKategori(katId);
     setYukleniyor(true);
 
-    if (katId === null) {
-      // "Tümü" seçildiyse hepsini getir
-      tumUrunleriGetir();
-    } else {
-      // Belirli kategori seçildiyse API'den filtreli iste
-      fetch(`https://hayalperest-api-pro-v1.onrender.com/api/urunler/kategori/${katId}`)
+    const url = katId === null 
+        ? 'https://hayalperest-api-pro-v1.onrender.com/api/urunler'
+        : `https://hayalperest-api-pro-v1.onrender.com/api/urunler/kategori/${katId}`;
+
+    fetch(url)
         .then(cevap => cevap.json())
         .then(veri => {
-            setUrunler(veri);
+            if (Array.isArray(veri)) setUrunler(veri);
+            else setUrunler([]);
+            setYukleniyor(false);
+        })
+        .catch(err => {
+            console.error(err);
             setYukleniyor(false);
         });
-    }
   };
 
-  // Arama Filtresi (Mevcut ürünler içinde arama yapar)
-  const filtrelenmisUrunler = urunler.filter(urun => {
-    return urun.ad.toLowerCase().includes(aramaMetni.toLowerCase());
-  });
+  // Filtreleme yaparken urunler'in dizi olduğundan emin oluyoruz
+  const filtrelenmisUrunler = Array.isArray(urunler) 
+    ? urunler.filter(urun => urun.ad.toLowerCase().includes(aramaMetni.toLowerCase()))
+    : [];
 
   return (
     <div>
-      {/* BAŞLIK VE ARAMA */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '20px' }}>
         <h2 style={{ fontSize: '30px', letterSpacing: '2px', margin: 0 }}>MAGAZA</h2>
         <input 
@@ -105,52 +126,47 @@ function Magaza({ sepeteEkle }) {
         />
       </div>
 
-      {/* --- KATEGORİ BUTONLARI --- */}
       <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '20px', marginBottom: '10px' }}>
-        {/* "Tümü" Butonu */}
         <button 
           onClick={() => kategoriSec(null)}
           style={{
-            padding: '10px 25px',
-            borderRadius: '20px',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            // Eğer seçili kategori null ise Rengi Turuncu yap, değilse Şeffaf yap
+            padding: '10px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold',
             backgroundColor: seciliKategori === null ? '#f39c12' : 'rgba(255,255,255,0.1)',
-            color: seciliKategori === null ? 'black' : 'white',
-            transition: 'all 0.3s'
+            color: seciliKategori === null ? 'black' : 'white', transition: 'all 0.3s'
           }}>
           Tümü
         </button>
-
-        {/* Veritabanından Gelen Kategoriler */}
         {kategoriler.map(kat => (
           <button 
-            key={kat.id}
-            onClick={() => kategoriSec(kat.id)}
+            key={kat.id} onClick={() => kategoriSec(kat.id)}
             style={{
-              padding: '10px 25px',
-              borderRadius: '20px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              // Seçili kategori bu ise Rengi Turuncu yap
+              padding: '10px 25px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: 'bold',
               backgroundColor: seciliKategori === kat.id ? '#f39c12' : 'rgba(255,255,255,0.1)',
-              color: seciliKategori === kat.id ? 'black' : 'white',
-              transition: 'all 0.3s'
+              color: seciliKategori === kat.id ? 'black' : 'white', transition: 'all 0.3s'
             }}>
             {kat.ad}
           </button>
         ))}
       </div>
 
+      {/* HATA MESAJI VARSA GÖSTER */}
+      {hataMesaji && (
+        <div style={{ padding: '20px', backgroundColor: 'rgba(231, 76, 60, 0.2)', borderRadius: '10px', marginBottom: '20px', border: '1px solid #e74c3c' }}>
+            ⚠️ {hataMesaji} <br/> 
+            <small>Render sunucusu uyanıyor olabilir, 30sn sonra sayfayı yenileyin.</small>
+        </div>
+      )}
+
       {yukleniyor && <div style={{ textAlign: 'center', padding: '50px', color: '#f39c12' }}>📡 Veriler Yükleniyor...</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px', marginTop: '10px' }}>
-        {filtrelenmisUrunler.map((urun) => (
-          <UrunKarti key={urun.id} veri={urun} sepeteAt={sepeteEkle} />
-        ))}
+        {filtrelenmisUrunler.length > 0 ? (
+            filtrelenmisUrunler.map((urun) => (
+            <UrunKarti key={urun.id} veri={urun} sepeteAt={sepeteEkle} />
+            ))
+        ) : (
+            !yukleniyor && !hataMesaji && <p>Ürün bulunamadı.</p>
+        )}
       </div>
     </div>
   )
