@@ -1,24 +1,50 @@
-/* 1. Tüm elementlerin kutu hesabını düzelt */
+/* 1. TEMEL AYARLAR */
 * {
   box-sizing: border-box;
 }
 
-/* 2. Sayfanın genel ayarları */
 body {
   margin: 0;
   padding: 0;
   width: 100%;
   min-height: 100vh;
-  background-color: #111; /* Siyah arka plan */
+  /* Derin Uzay Gradienti */
+  background: radial-gradient(circle at center, #1a1a2e 0%, #16213e 50%, #000000 100%);
   color: white;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden; /* Yanlardan taşmayı engelle */
 }
 
-/* 3. İŞTE ÇÖZÜM BURADA: React'in Ana Kutusu (#root) */
 #root {
-  width: 100%;       /* Genişliği %100 yap */
-  max-width: 100%;   /* Kısıtlamayı kaldır */
-  margin: 0;         /* Kenar boşluklarını sıfırla */
-  padding: 0;        /* İç boşlukları sıfırla */
-  text-align: left;  /* Yazıları sola yasla (Vite bazen ortalar) */
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 2. ANİMASYONLAR */
+
+/* Süzülme Efekti (Astronot gibi) */
+@keyframes süzülme {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); } /* Yukarı çık */
+  100% { transform: translateY(0px); } /* Aşağı in */
+}
+
+.floating-anim {
+  animation: süzülme 3s ease-in-out infinite;
+}
+
+/* Parlama Efekti */
+.glow-text {
+  text-shadow: 0 0 10px rgba(243, 156, 18, 0.7), 0 0 20px rgba(243, 156, 18, 0.5);
+}
+
+/* Kart Hover Efekti (Kartın üzerine gelince) */
+.urun-karti {
+  transition: all 0.3s ease; /* Yumuşak geçiş */
+}
+
+.urun-karti:hover {
+  transform: scale(1.05); /* %5 büyüt */
+  box-shadow: 0 0 20px rgba(243, 156, 18, 0.4) !important; /* Sarı ışık saç */
+  border-color: #f39c12 !important;
 }
