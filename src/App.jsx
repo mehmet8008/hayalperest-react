@@ -1,60 +1,87 @@
-import { useState } from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import Profil from './pages/Profil'
 import Anasayfa from './pages/Anasayfa'
 import Magaza from './pages/Magaza'
+import Giris from './pages/Giris'
+import Kayit from './pages/Kayit'
 
 function App() {
   const [sepet, setSepet] = useState([]); 
   const [sepetAcik, setSepetAcik] = useState(false);
+  
+  // --- KULLANICI YÖNETİMİ (AUTH STATE) ---
+  const [kullanici, setKullanici] = useState(null); // Başlangıçta kimse yok (null)
+  const navigate = useNavigate(); // Çıkış yapınca yönlendirmek için
 
-  // Sepete Ekleme
-  function sepeteEkle(urun) {
-    setSepet([...sepet, urun]);
-    toast.success(`${urun.ad} yörüngeye eklendi! 🚀`, {
-      icon: "🪐",
-      theme: "dark"
-    });
+  // 1. Sayfa ilk açıldığında: Daha önce giriş yapılmış mı kontrol et
+  useEffect(() => {
+    const kayitliKullanici = localStorage.getItem('kullanici');
+    const kayitliToken = localStorage.getItem('token');
+    
+    if (kayitliKullanici && kayitliToken) {
+      setKullanici(JSON.parse(kayitliKullanici)); // String'i tekrar objeye çevir
+    }
+  }, []);
+
+  // 2. Giriş Yap Fonksiyonu (Giris.jsx kullanacak)
+  function sistemeGiris(userBilgisi, token) {
+    setKullanici(userBilgisi);
+    // Tarayıcı hafızasına kaydet (Sayfa yenilenince gitmesin diye)
+    localStorage.setItem('kullanici', JSON.stringify(userBilgisi));
+    localStorage.setItem('token', token);
   }
 
-  // Sepetten Çıkarma
+  // 3. Çıkış Yap Fonksiyonu
+  function cikisYap() {
+    setKullanici(null);
+    localStorage.removeItem('kullanici');
+    localStorage.removeItem('token');
+    toast.info("Güle güle! Yine bekleriz. 👋");
+    navigate('/');
+  }
+
+  // --- SEPET FONKSİYONLARI ---
+  function sepeteEkle(urun) {
+    setSepet([...sepet, urun]);
+    toast.success(`${urun.ad} yörüngeye eklendi! 🚀`, { icon: "🪐", theme: "dark" });
+  }
+
   function sepettenCikar(indexNo) {
     const yeniSepet = [...sepet];
-    const silinenUrun = yeniSepet[indexNo];
     yeniSepet.splice(indexNo, 1);
     setSepet(yeniSepet);
-    toast.error(`${silinenUrun.ad} boşluğa bırakıldı. 🗑️`, { theme: "dark" });
   }
 
   const toplamTutar = sepet.reduce((toplam, urun) => toplam + urun.fiyat, 0);
 
-  // --- SİPARİŞİ TAMAMLAMA (Backend'e Gönderme) ---
+  // --- SİPARİŞİ TAMAMLAMA ---
   function siparisiTamamla() {
     if(sepet.length === 0) return;
 
+    // GÜNCELLEME: Eğer kullanıcı giriş yapmışsa onun adını, yapmamışsa "Misafir" kullan
+    const musteriAdi = kullanici ? kullanici.ad : "Misafir React Kullanıcısı";
+
     const siparisVerisi = {
-      musteri_ad: "Misafir React Kullanıcısı", // İleride burası dinamik olacak
+      musteri_ad: musteriAdi,
       toplam_tutar: toplamTutar,
       sepet: sepet
     };
 
-    // Yükleniyor mesajı verelim
     const toastId = toast.loading("Sipariş merkeze iletiliyor...");
 
-    fetch('http://localhost:3000/api/siparis-ver', {
+    fetch('https://hayalperest-api-pro-v1.onrender.com/api/siparis-ver', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(siparisVerisi)
     })
     .then(cevap => cevap.json())
     .then(sonuc => {
-      // Yükleniyor mesajını sil, başarı mesajı göster
       toast.update(toastId, { render: `Sipariş Alındı! No: #${sonuc.siparisId} 🎉`, type: "success", isLoading: false, autoClose: 5000 });
-      
-      setSepet([]); // Sepeti boşalt
-      setSepetAcik(false); // Pencereyi kapat
+      setSepet([]);
+      setSepetAcik(false);
     })
     .catch(hata => {
       console.error("Sipariş hatası:", hata);
@@ -65,7 +92,7 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', padding: '20px', position: 'relative' }}>
       
-      {/* --- MENÜ (NAVBAR) --- */}
+      {/* --- NAVBAR --- */}
       <div style={{ 
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
         marginBottom: '40px', padding: '15px 30px', backgroundColor: 'rgba(0,0,0,0.5)', 
@@ -79,17 +106,35 @@ function App() {
           </nav>
         </div>
         
-        <button 
-          onClick={() => setSepetAcik(!sepetAcik)}
-          style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '10px 25px', borderRadius: '30px', cursor: 'pointer', transition: 'all 0.3s' }}>
-          🛒 Sepet ({sepet.length})
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {/* Kullanıcı Giriş Durumuna Göre Değişen Butonlar */}
+          {kullanici ? (
+            <>
+              <Link to="/profil" style={{ color: '#f39c12', fontWeight: 'bold', textDecoration: 'none', border: '1px solid #f39c12', padding: '5px 15px', borderRadius: '20px', marginRight: '10px' }}>
+                👨‍🚀 {kullanici.ad}
+              </Link>
+              <button onClick={cikisYap} style={{ background: 'transparent', border: '1px solid #e74c3c', color: '#e74c3c', padding: '8px 15px', borderRadius: '20px', cursor: 'pointer' }}>Çıkış</button>
+            </>
+          ) : (
+            <Link to="/giris" style={{ background: '#f39c12', color: 'black', textDecoration: 'none', padding: '8px 20px', borderRadius: '20px', fontWeight: 'bold' }}>Giriş Yap</Link>
+          )}
+
+          <button 
+            onClick={() => setSepetAcik(!sepetAcik)}
+            style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', padding: '10px 25px', borderRadius: '30px', cursor: 'pointer', transition: 'all 0.3s' }}>
+            🛒 ({sepet.length})
+          </button>
+        </div>
       </div>
 
-      {/* --- SAYFALAR --- */}
+      {/* --- ROTALAR --- */}
       <Routes>
         <Route path="/" element={<Anasayfa />} />
         <Route path="/magaza" element={<Magaza sepeteEkle={sepeteEkle} />} />
+        <Route path="/profil" element={<Profil />} />
+        {/* Giriş sayfasına "sistemeGiris" fonksiyonunu gönderiyoruz */}
+        <Route path="/giris" element={<Giris girisYapFonksiyonu={sistemeGiris} />} />
+        <Route path="/kayit" element={<Kayit />} />
       </Routes>
 
       {/* --- SEPET PENCERESİ --- */}
@@ -104,15 +149,12 @@ function App() {
             <button onClick={() => setSepetAcik(false)} style={{ background: 'transparent', border: 'none', color: '#e74c3c', fontSize: '24px', cursor: 'pointer' }}>✖</button>
           </div>
 
-          {sepet.length === 0 ? <p style={{ color: '#777', textAlign: 'center', marginTop: '50px' }}>Sepetinizde henüz ürün yok.</p> : (
+          {sepet.length === 0 ? <p style={{ color: '#777', textAlign: 'center', marginTop: '50px' }}>Sepetiniz boş.</p> : (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               <div style={{ flex: 1 }}>
                 {sepet.map((urun, index) => (
                   <div key={index} style={{ borderBottom: '1px solid #333', padding: '15px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <div style={{ fontWeight: 'bold' }}>{urun.ad}</div>
-                        <div style={{ fontSize: '12px', color: '#aaa' }}>{urun.fiyat} TL</div>
-                    </div>
+                    <div><div style={{ fontWeight: 'bold' }}>{urun.ad}</div><div style={{ fontSize: '12px', color: '#aaa' }}>{urun.fiyat} TL</div></div>
                     <button onClick={() => sepettenCikar(index)} style={{ background: '#333', color: '#e74c3c', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer' }}><i className="fas fa-trash"></i> Sil</button>
                   </div>
                 ))}
@@ -120,36 +162,20 @@ function App() {
               
               <div style={{ marginTop: '20px', borderTop: '2px solid #333', paddingTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '18px' }}>
-                    <span>Toplam:</span>
-                    <span style={{ color: '#f39c12', fontWeight: 'bold' }}>{toplamTutar} TL</span>
+                    <span>Toplam:</span><span style={{ color: '#f39c12', fontWeight: 'bold' }}>{toplamTutar} TL</span>
                 </div>
-                
-                {/* İŞTE GÜNCELLENEN BUTON BURADA */}
                 <button 
                   onClick={siparisiTamamla}
-                  style={{ 
-                      width: '100%', padding: '15px', 
-                      background: 'linear-gradient(45deg, #27ae60, #2ecc71)', 
-                      color: 'white', border: 'none', borderRadius: '10px', 
-                      fontSize: '18px', cursor: 'pointer', fontWeight: 'bold', 
-                      boxShadow: '0 5px 15px rgba(46, 204, 113, 0.3)',
-                      transition: 'transform 0.2s'
-                  }}
-                  onMouseDown={(e) => e.target.style.transform = 'scale(0.95)'}
-                  onMouseUp={(e) => e.target.style.transform = 'scale(1)'}
-                >
+                  style={{ width: '100%', padding: '15px', background: 'linear-gradient(45deg, #27ae60, #2ecc71)', color: 'white', border: 'none', borderRadius: '10px', fontSize: '18px', cursor: 'pointer', fontWeight: 'bold' }}>
                   Ödemeyi Tamamla 💳
                 </button>
-
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* --- BİLDİRİM KUTUSU --- */}
       <ToastContainer position="top-right" autoClose={3000} theme="dark" />
-
     </div>
   )
 }

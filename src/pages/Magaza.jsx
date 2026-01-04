@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-// --- ÜRÜN KARTI (Burası Aynı) ---
+// --- ÜRÜN KARTI ---
 function UrunKarti(props) {
   return (
     <div className="urun-karti" style={{ 
@@ -40,89 +40,114 @@ function UrunKarti(props) {
 
 function Magaza({ sepeteEkle }) { 
   const [urunler, setUrunler] = useState([]);
+  const [kategoriler, setKategoriler] = useState([]); // Kategoriler için hafıza
+  const [seciliKategori, setSeciliKategori] = useState(null); // Şu an hangi kategori seçili?
   const [yukleniyor, setYukleniyor] = useState(true);
-  
-  // 1. YENİ STATE: Arama kutusuna yazılan metin
   const [aramaMetni, setAramaMetni] = useState(""); 
 
+  // 1. Sayfa Açılınca Hem Ürünleri Hem Kategorileri Çek
   useEffect(() => {
-    fetch('http://localhost:3000/api/urunler')
+    tumUrunleriGetir();
+    kategorileriGetir();
+  }, []);
+
+  const tumUrunleriGetir = () => {
+    setYukleniyor(true);
+    fetch('https://hayalperest-api-pro-v1.onrender.com/api/urunler')
       .then(cevap => cevap.json())
       .then(veri => {
         setUrunler(veri);
         setYukleniyor(false);
-      })
-      .catch(hata => {
-        console.error("Hata:", hata);
-        setYukleniyor(false);
       });
-  }, []);
+  };
 
-  // 2. FİLTRELEME MANTIĞI (En önemli kısım)
-  // Ürünleri tek tek kontrol et. Eğer adı, arama metnini içeriyorsa listeye al.
+  const kategorileriGetir = () => {
+    fetch('https://hayalperest-api-pro-v1.onrender.com/api/kategoriler')
+      .then(cevap => cevap.json())
+      .then(veri => setKategoriler(veri));
+  };
+
+  // 2. Kategoriye Tıklanınca Çalışacak Fonksiyon
+  const kategoriSec = (katId) => {
+    setSeciliKategori(katId);
+    setYukleniyor(true);
+
+    if (katId === null) {
+      // "Tümü" seçildiyse hepsini getir
+      tumUrunleriGetir();
+    } else {
+      // Belirli kategori seçildiyse API'den filtreli iste
+      fetch(`https://hayalperest-api-pro-v1.onrender.com/api/urunler/kategori/${katId}`)
+        .then(cevap => cevap.json())
+        .then(veri => {
+            setUrunler(veri);
+            setYukleniyor(false);
+        });
+    }
+  };
+
+  // Arama Filtresi (Mevcut ürünler içinde arama yapar)
   const filtrelenmisUrunler = urunler.filter(urun => {
-    // Hem ürün adını hem aranan kelimeyi küçük harfe çevir (Büyük/küçük harf duyarlılığını kaldır)
     return urun.ad.toLowerCase().includes(aramaMetni.toLowerCase());
   });
 
   return (
     <div>
-      {/* Üst Kısım: Başlık ve Arama Kutusu Yan Yana */}
-      <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          borderBottom: '1px solid #333', 
-          paddingBottom: '20px', 
-          marginBottom: '30px',
-          flexWrap: 'wrap',
-          gap: '20px'
-      }}>
-        <h2 style={{ fontSize: '30px', letterSpacing: '2px', margin: 0 }}>
-          MAGAZA ENVANTERİ
-        </h2>
-
-        {/* 3. ARAMA INPUTU (SEARCH BAR) */}
+      {/* BAŞLIK VE ARAMA */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '20px' }}>
+        <h2 style={{ fontSize: '30px', letterSpacing: '2px', margin: 0 }}>MAGAZA</h2>
         <input 
           type="text" 
-          placeholder="Evrende ürün ara..." 
+          placeholder="Evrende ara..." 
           value={aramaMetni}
-          // Her tuşa basıldığında (onChange) state'i güncelle
           onChange={(e) => setAramaMetni(e.target.value)}
-          style={{
-            padding: '15px 25px',
-            fontSize: '16px',
-            borderRadius: '50px',
-            border: '1px solid rgba(255,255,255,0.2)',
-            backgroundColor: 'rgba(255,255,255,0.1)', // Şeffaf arka plan
-            color: 'white',
-            outline: 'none',
-            width: '300px',
-            backdropFilter: 'blur(5px)',
-            transition: 'all 0.3s'
-          }}
-          // Odaklanınca (Focus) parlasın
-          onFocus={(e) => e.target.style.borderColor = '#f39c12'}
-          onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.2)'}
+          style={{ padding: '15px 25px', fontSize: '16px', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', outline: 'none', width: '300px' }}
         />
       </div>
 
-      {yukleniyor && (
-        <div style={{ textAlign: 'center', padding: '50px', fontSize: '24px', color: '#f39c12' }}>
-           📡 Evrenden Veri İndiriliyor...
-        </div>
-      )}
+      {/* --- KATEGORİ BUTONLARI --- */}
+      <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '20px', marginBottom: '10px' }}>
+        {/* "Tümü" Butonu */}
+        <button 
+          onClick={() => kategoriSec(null)}
+          style={{
+            padding: '10px 25px',
+            borderRadius: '20px',
+            border: 'none',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            // Eğer seçili kategori null ise Rengi Turuncu yap, değilse Şeffaf yap
+            backgroundColor: seciliKategori === null ? '#f39c12' : 'rgba(255,255,255,0.1)',
+            color: seciliKategori === null ? 'black' : 'white',
+            transition: 'all 0.3s'
+          }}>
+          Tümü
+        </button>
 
-      {/* 4. SONUÇ YOKSA UYARI VER */}
-      {!yukleniyor && filtrelenmisUrunler.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#aaa' }}>
-              <h3>🪐 Aradığınız kriterlere uygun ürün bulunamadı.</h3>
-              <p>Belki de henüz icat edilmemiştir?</p>
-          </div>
-      )}
+        {/* Veritabanından Gelen Kategoriler */}
+        {kategoriler.map(kat => (
+          <button 
+            key={kat.id}
+            onClick={() => kategoriSec(kat.id)}
+            style={{
+              padding: '10px 25px',
+              borderRadius: '20px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              // Seçili kategori bu ise Rengi Turuncu yap
+              backgroundColor: seciliKategori === kat.id ? '#f39c12' : 'rgba(255,255,255,0.1)',
+              color: seciliKategori === kat.id ? 'black' : 'white',
+              transition: 'all 0.3s'
+            }}>
+            {kat.ad}
+          </button>
+        ))}
+      </div>
 
-      {/* 5. ARTIK 'urunler' DEĞİL 'filtrelenmisUrunler' DÖNÜYORUZ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px', marginTop: '30px' }}>
+      {yukleniyor && <div style={{ textAlign: 'center', padding: '50px', color: '#f39c12' }}>📡 Veriler Yükleniyor...</div>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px', marginTop: '10px' }}>
         {filtrelenmisUrunler.map((urun) => (
           <UrunKarti key={urun.id} veri={urun} sepeteAt={sepeteEkle} />
         ))}
