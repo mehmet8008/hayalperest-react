@@ -20,7 +20,7 @@ function Kayit() {
     e.preventDefault(); // Sayfa yenilenmesini engelle
 
     try {
-      const response = await fetch('https://hayalperest-api-pro-v1.onrender.com/api/kayit', {
+      const response = await fetch('https://hayalperest-api-mehmet-2026-v99.onrender.com/api/kayit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

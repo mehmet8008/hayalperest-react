@@ -51,7 +51,7 @@ function Magaza({ sepeteEkle }) {
   const tumUrunleriGetir = () => {
     setYukleniyor(true);
     // Buradaki URL'in Render URL'i olduğundan emin ol (sonunda / olmasın)
-    fetch('https://hayalperest-api-pro-v1.onrender.com/api/urunler')
+    fetch('https://hayalperest-api-mehmet-2026-v99.onrender.com/api/urunler')
       .then(cevap => {
         if (!cevap.ok) throw new Error("Sunucu hatası: " + cevap.status);
         return cevap.json();
@@ -78,7 +78,7 @@ function Magaza({ sepeteEkle }) {
   };
 
   const kategorileriGetir = () => {
-    fetch('https://hayalperest-api-pro-v1.onrender.com/api/kategoriler')
+    fetch('https://hayalperest-api-mehmet-2026-v99.onrender.com/api/kategoriler')
       .then(cevap => cevap.json())
       .then(veri => {
           if(Array.isArray(veri)) setKategoriler(veri);
@@ -92,8 +92,8 @@ function Magaza({ sepeteEkle }) {
     setYukleniyor(true);
 
     const url = katId === null 
-        ? 'https://hayalperest-api-pro-v1.onrender.com/api/urunler'
-        : `https://hayalperest-api-pro-v1.onrender.com/api/urunler/kategori/${katId}`;
+        ? 'https://hayalperest-api-mehmet-2026-v99.onrender.com/api/urunler'
+        : `https://hayalperest-api-mehmet-2026-v99.onrender.com/api/urunler/kategori/${katId}`;
 
     fetch(url)
         .then(cevap => cevap.json())
