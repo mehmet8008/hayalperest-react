@@ -59,34 +59,51 @@ function App() {
 
   // --- SİPARİŞİ TAMAMLAMA ---
   function siparisiTamamla() {
-    if(sepet.length === 0) return;
+   // Siparişi Tamamla Fonksiyonu (App.jsx içine)
+  const siparisiTamamla = () => {
+    // 1. Sepet boşsa işlem yapma
+    if (sepet.length === 0) {
+        toast.error("Sepetiniz boş!");
+        return;
+    }
 
-    // GÜNCELLEME: Eğer kullanıcı giriş yapmışsa onun adını, yapmamışsa "Misafir" kullan
-    const musteriAdi = kullanici ? kullanici.ad : "Misafir React Kullanıcısı";
+    // 2. Yükleniyor bildirimi göster
+    const toastId = toast.loading("Sipariş oluşturuluyor...");
 
-    const siparisVerisi = {
-      musteri_ad: musteriAdi,
-      toplam_tutar: toplamTutar,
-      sepet: sepet
+    // 3. Veriyi Taze Hazırla (Değişkeni burada oluşturuyoruz)
+    const guncelSiparisVerisi = {
+        musteri_ad: kullanici ? kullanici.ad : "Misafir Kullanıcı",
+        toplam_tutar: toplamTutar(),
+        sepet: sepet
     };
 
-    const toastId = toast.loading("Sipariş merkeze iletiliyor...");
+    console.log("Gönderilen Veri:", guncelSiparisVerisi); // Konsoldan kontrol edelim
 
+    // 4. API'ye Gönder
     fetch('https://hayalperest-api-mehmet-2026-v99.onrender.com/api/siparis-ver', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(siparisVerisi)
+      body: JSON.stringify(guncelSiparisVerisi) // Yeni oluşturduğumuz objeyi gönderiyoruz
     })
-    .then(cevap => cevap.json())
+    .then(cevap => {
+        if (!cevap.ok) throw new Error("Sunucu Hatası: " + cevap.status);
+        return cevap.json();
+    })
     .then(sonuc => {
+      // Eğer veritabanı ID vermediyse hata var demektir
+      if (!sonuc.siparisId) {
+          throw new Error("Sipariş ID oluşmadı!");
+      }
+
       toast.update(toastId, { render: `Sipariş Alındı! No: #${sonuc.siparisId} 🎉`, type: "success", isLoading: false, autoClose: 5000 });
-      setSepet([]);
-      setSepetAcik(false);
+      setSepet([]);      // Sepeti boşalt
+      setSepetAcik(false); // Sepeti kapat
     })
     .catch(hata => {
       console.error("Sipariş hatası:", hata);
-      toast.update(toastId, { render: "Bir sorun oluştu!", type: "error", isLoading: false, autoClose: 3000 });
+      toast.update(toastId, { render: "Sipariş kaydedilemedi! (Konsola bak)", type: "error", isLoading: false, autoClose: 3000 });
     });
+  }; 
   }
 
   return (
