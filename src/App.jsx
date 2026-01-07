@@ -43,9 +43,13 @@ function App() {
 
   // 4. TOPLAM TUTAR HESAPLAMA (DÜZELTİLEN KISIM) 🧮
   // reduce ile dönerken "parseFloat" kullanarak metni sayıya çeviriyoruz.
+  // Fiyat string olabilir ve içinde "₺" gibi karakterler olabilir, bu yüzden önce temizliyoruz.
   const toplamTutar = sepet.reduce((toplam, urun) => {
-    return toplam + parseFloat(urun.fiyat);
-  }, 0).toFixed(2); // Sonucu virgülden sonra 2 hane (1300.00) yap.
+    // Fiyat string ise, sadece sayısal kısmı al (₺, boşluk vb. karakterleri temizle)
+    const fiyatStr = String(urun.fiyat || '0').replace(/[^\d.,]/g, '').replace(',', '.');
+    const fiyatSayi = parseFloat(fiyatStr) || 0;
+    return toplam + fiyatSayi;
+  }, 0);
 
   // 5. SİPARİŞ VERME FONKSİYONU (DÜZELTİLEN KISIM) 🛒
   const siparisiTamamla = () => {
@@ -59,7 +63,7 @@ function App() {
     // Veriyi hazırla (Giriş yapmamışsa Misafir yaz)
     const siparisVerisi = {
         musteri_ad: kullanici ? kullanici.ad : "Misafir Gezgin",
-        toplam_tutar: toplamTutar, // Hesaplanan sayıyı gönderiyoruz
+        toplam_tutar: parseFloat(toplamTutar.toFixed(2)), // Hesaplanan sayıyı gönderiyoruz
         sepet: sepet
     };
 
@@ -153,4 +157,50 @@ function App() {
                     {sepet.length === 0 ? (
                         <p style={{ color: '#aaa', textAlign: 'center', marginTop: '50px' }}>Sepetin boş kaptan.</p>
                     ) : (
-                        sepet.map((
+                        sepet.map((urun, index) => (
+                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', marginBottom: '10px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <h4 style={{ color: '#fff', margin: '0 0 5px 0', fontSize: '16px' }}>{urun.ad}</h4>
+                                    <p style={{ color: '#f39c12', margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{typeof urun.fiyat === 'string' ? urun.fiyat : `${urun.fiyat} ₺`}</p>
+                                </div>
+                                <button onClick={() => sepettenCikar(index)} style={{ background: 'transparent', border: '1px solid #e74c3c', color: '#e74c3c', padding: '5px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {/* Toplam ve Sipariş Butonu */}
+                {sepet.length > 0 && (
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px', marginTop: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <span style={{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>Toplam:</span>
+                            <span style={{ color: '#f39c12', fontSize: '24px', fontWeight: 'bold' }}>{toplamTutar.toFixed(2)} ₺</span>
+                        </div>
+                        <button 
+                            onClick={siparisiTamamla}
+                            style={{ 
+                                width: '100%', 
+                                background: 'linear-gradient(135deg, #66fcf1 0%, #45a29e 100%)', 
+                                border: 'none', 
+                                color: '#0b0c10', 
+                                padding: '15px', 
+                                borderRadius: '10px', 
+                                cursor: 'pointer', 
+                                fontSize: '18px', 
+                                fontWeight: 'bold',
+                                transition: 'transform 0.2s',
+                                boxShadow: '0 4px 15px rgba(102, 252, 241, 0.3)'
+                            }}
+                            onMouseOver={(e) => e.target.style.transform = 'scale(1.02)'}
+                            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                        >
+                            Siparişi Tamamla 🚀
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+      )}
+    </div>
+  );
+}
